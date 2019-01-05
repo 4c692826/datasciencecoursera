@@ -6,3 +6,11 @@ output: html_document
 ---
 
 ## This is a markdown file
+
+
+
+read_dir <- function(url, ...) {
+  
+  }
+
+pollutantmean <- function() {}
