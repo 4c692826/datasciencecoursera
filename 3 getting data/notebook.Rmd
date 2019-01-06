@@ -1,0 +1,199 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+# libraries
+
+# Globals
+global <- list()
+```
+
+
+## quiz 1
+
+```{r}
+qz1 <- read.csv("getdata_data_ss06hid.csv")
+str(qz1)
+```
+
+How many properties are worth $1,000,000 or more?
+
+```{r}
+table(qz1$VAL)
+```
+
+Download the Excel spreadsheet on Natural Gas Aquisition Program here:
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FDATA.gov_NGAP.xlsx 
+
+```{r}
+library(readxl)
+dat <- read_excel("~/Projetos/johns hopkins data science specialization/git/3 getting data/getdata_data_DATA.gov_NGAP.xlsx", 
+    sheet = "NGAP Sample Data", range = "G18:O23")
+View(dat)
+```
+
+```{r}
+sum(dat$Zip*dat$Ext,na.rm=T)
+```
+
+Read the XML data on Baltimore restaurants from here:
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Frestaurants.xml 
+
+```{r}
+global$url <-"https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Frestaurants.xml"
+
+library(XML)
+global$restaurants <- xmlTreeParse(global$url)
+
+library(xml2)
+global$restarants <- read_xml(global$url)
+```
+
+The American Community Survey distributes downloadable data about United States communities. Download the 2006 microdata survey about housing for the state of Idaho using download.file() from here:
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv
+
+using the fread() command load the data into an R object
+
+```{r}
+global$url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv"
+download.file(global$url, "qz1.5.csv")
+
+library(data.table)
+global$DT <- fread("qz1.5.csv")
+str(global$DT)
+```
+
+The following are ways to calculate the average value of the variable pwgtp15
+
+broken down by sex. Using the data.table package, which will deliver the fastest user time?
+
+```{r}
+DT <- global$DT
+system.time(mean(DT$pwgtp15,by=DT$SEX))
+
+system.time(DT[,mean(pwgtp15),by=SEX])
+
+system.time({mean(DT[DT$SEX==1,]$pwgtp15); mean(DT[DT$SEX==2,]$pwgtp15)})
+
+system.time(tapply(DT$pwgtp15,DT$SEX,mean))
+
+system.time({rowMeans(DT)[DT$SEX==1]; rowMeans(DT)[DT$SEX==2]})
+
+system.time(sapply(split(DT$pwgtp15,DT$SEX),mean))
+```
+
+## Quiz 2
+
+Register an application with the Github API here https://github.com/settings/applications. Access the API to get information on your instructors repositories (hint: this is the url you want "https://api.github.com/users/jtleek/repos"). Use this data to find the time that the datasharing repo was created. What time was it created?
+
+This tutorial may be useful (https://github.com/hadley/httr/blob/master/demo/oauth2-github.r). You may also need to run the code in the base R package and not R studio.
+
+```{r}
+library(httr)
+
+# 1. Find OAuth settings for github:
+#    http://developer.github.com/v3/oauth/
+oauth_endpoints("github")
+
+# 2. To make your own application, register at
+#    https://github.com/settings/developers. Use any URL for the homepage URL
+#    (http://github.com is fine) and  http://localhost:1410 as the callback url
+#
+#    Replace your key and secret below.
+myapp <- oauth_app("rafaelocremix",
+  key = "91807422e5ea19a83afe",
+  secret = "33a9378f04a5f88c25fc48346cceb009767eb7ca"
+)
+
+# 3. Get OAuth credentials
+github_token <- oauth2.0_token(oauth_endpoints("github"), myapp)
+
+# 4. Use API
+gtoken <- config(token = github_token)
+req <- GET("https://api.github.com/rate_limit", gtoken)
+stop_for_status(req)
+content(req)
+
+# OR:
+# req <- with_config(gtoken, GET("https://api.github.com/rate_limit"))
+# stop_for_status(req)
+# content(req)
+```
+
+```{r}
+library(jsonlite)
+jsondata <- fromJSON("https://api.github.com/users/jtleek/repos")
+names(jsondata)
+
+subset(jsondata, name == "datasharing")$created_at
+```
+
+The sqldf package allows for execution of SQL commands on R data frames. We will use the sqldf package to practice the queries we might send with the dbSendQuery command in RMySQL.
+
+Download the American Community Survey data and load it into an R object called acs
+
+```{r}
+global$url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv"
+download.file(global$url, "qz2_2.csv")
+acs <- read.csv("qz2_2.csv")
+```
+
+Which of the following commands will select only the data for the probability weights pwgtp1 with ages less than 50?
+
+```{r}
+library(sqldf)
+sqldf("select pwgtp1 from acs where AGEP < 50")
+
+# sqldf("select * from acs")
+# 
+# sqldf("select pwgtp1 from acs")
+# 
+# sqldf("select * from acs where AGEP <\lt< 50 and pwgtp1")
+```
+
+Using the same data frame you created in the previous problem, what is the equivalent function to unique(acs$AGEP)
+
+```{r}
+sqldf("select distinct AGEP from acs")
+```
+
+How many characters are in the 10th, 20th, 30th and 100th lines of HTML from this page:
+
+http://biostat.jhsph.edu/~jleek/contact.html
+
+(Hint: the nchar() function in R may be helpful)
+
+```{r}
+global$connection <- url("http://biostat.jhsph.edu/~jleek/contact.html")
+global$biostat <- readLines(global$connection)
+close(global$connection)
+nchar(global$biostat[c(10,20,30,100)])
+```
+
+Read this data set into R and report the sum of the numbers in the fourth of the nine columns.
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fwksst8110.for
+
+Original source of the data: http://www.cpc.ncep.noaa.gov/data/indices/wksst8110.for
+
+(Hint this is a fixed width file format)
+
+```{r}
+global$url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fwksst8110.for"
+download.file(global$url, "qz2_5.csv")
+library(readr)
+global$qz2.5 <- read_table2("~/Projetos/johns hopkins data science specialization/git/3 getting data/qz2_5.csv", 
+    col_types = cols(SST_1 = col_number()), 
+    skip = 3)
+View(global$qz2.5)
+
+sum(global$qz2.5$SST_1)
+```
+
+## Quiz 3
+
